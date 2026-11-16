@@ -19,5 +19,5 @@ jobs:
       - name: Python only for logic (no JS/TS source files)
         run: |
           if git ls-files | grep -E "\.(js|jsx|ts|tsx)$" ; then echo "Logic must be Python (see AGENTS.md)"; exit 1; fi
-      - run: python -m py_compile app.py
+      - run: python -m py_compile app.py home.py
       - run: pytest -q -rxX
