@@ -13,13 +13,33 @@ from garantovano.search import search, settlement_centroid
 
 st.set_page_config(page_title="Гарантовано", page_icon="🩺", layout="centered")
 st.markdown("""<style>
-.block-container {max-width: 880px; padding-top: 2.2rem;}
-h1 {font-size: 2.7rem !important; letter-spacing: -0.5px; margin-bottom: 0 !important;}
-.g-sub {font-size: 1.12rem; color: #3E4C50; margin: 0.2rem 0 1.1rem;}
-.g-sos {background: #FDECEC; border: 2px solid #C5221F; border-radius: 12px; padding: 14px 18px;
+:root {--ivory: #FAF6EE; --card: #FFFDF8; --line: #E4DCCB; --blue: #1F5FAE; --blue-soft: #EAF1F8;
+       --navy: #14263D; --muted: #4A5A6E;}
+.block-container {max-width: 900px; padding-top: 2rem;}
+[data-testid="stSidebar"] {background: #F2ECDF; border-right: 1px solid var(--line);}
+h1 {font-size: 2.8rem !important; letter-spacing: -0.6px; margin-bottom: 0 !important; color: var(--navy) !important;}
+h3 {color: var(--navy) !important;}
+.g-eyebrow {display: inline-block; background: var(--blue-soft); color: var(--blue); font-weight: 700;
+            font-size: 0.8rem; letter-spacing: 1.2px; text-transform: uppercase; padding: 4px 12px;
+            border-radius: 999px; margin-bottom: 0.4rem;}
+.g-sub {font-size: 1.12rem; color: var(--muted); margin: 0.3rem 0 1.2rem; line-height: 1.55;}
+.g-sub b {color: var(--blue);}
+[data-testid="stBaseButton-secondary"], button[kind="secondary"] {
+    background: var(--card) !important; border: 1px solid #CFDCEC !important; color: var(--blue) !important;
+    border-radius: 999px !important; font-weight: 600 !important;}
+[data-testid="stBaseButton-secondary"]:hover, button[kind="secondary"]:hover {
+    background: var(--blue-soft) !important; border-color: var(--blue) !important;}
+[data-testid="stBaseButton-primary"], button[kind="primary"] {
+    border-radius: 12px !important; font-weight: 700 !important; padding: 0.7rem 1rem !important;
+    box-shadow: 0 6px 18px rgba(31, 95, 174, 0.22) !important;}
+[data-testid="stVerticalBlockBorderWrapper"] {background: var(--card); border-color: var(--line) !important;
+    border-radius: 14px !important; box-shadow: 0 1px 3px rgba(20, 38, 61, 0.06);}
+[data-testid="stExpander"] details {background: var(--card); border-color: var(--line) !important; border-radius: 12px;}
+.g-sos {background: #FDECEC; border: 2px solid #C5221F; border-radius: 14px; padding: 14px 18px;
         font-size: 1.2rem; font-weight: 700; color: #8A1C14; margin: 0.4rem 0 0.8rem;}
-.g-pay {background: #FFF4E0; border-radius: 10px; padding: 10px 14px; font-weight: 600; color: #6B3E00;}
-.g-trust {font-size: 0.85rem; color: #5B6B6F;}
+.g-pay {background: #FFF1D6; border-left: 4px solid #C77700; border-radius: 10px; padding: 10px 14px;
+        font-weight: 600; color: #5C3600;}
+.g-trust {font-size: 0.85rem; color: var(--muted);}
 </style>""", unsafe_allow_html=True)
 
 
@@ -99,6 +119,7 @@ packages, facilities, rights, meta = load_all()
 ss = st.session_state
 
 # 1. Promise + need ---------------------------------------------------------------------------------
+st.markdown('<span class="g-eyebrow">🩺 Безкоштовна медицина · дані НСЗУ</span>', unsafe_allow_html=True)
 st.title("Гарантовано")
 st.markdown('<p class="g-sub">Опишіть своїми словами, що вам потрібно, — покажемо найближчі заклади, '
             'де це <b>безкоштовно</b> за Програмою медичних гарантій, і що робити, якщо просять гроші.</p>',

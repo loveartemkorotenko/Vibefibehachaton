@@ -1,9 +1,10 @@
 [theme]
+# Ivory paper + medical blue. Text contrast on the ivory background is above 12:1.
 base = "light"
-primaryColor = "#1F6FEB"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F2F6FC"
-textColor = "#1B2430"
+primaryColor = "#1F5FAE"
+backgroundColor = "#FAF6EE"
+secondaryBackgroundColor = "#EAF1F8"
+textColor = "#14263D"
 font = "sans serif"
 
 [client]
