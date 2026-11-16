@@ -4,8 +4,6 @@ import pytest
 from garantovano.models import Facility
 from garantovano.search import haversine_km, search, settlement_centroid
 
-pytestmark = pytest.mark.xfail(raises=NotImplementedError, strict=False, reason="A1 not implemented yet")
-
 KYIV, LVIV = (50.4501, 30.5234), (49.8397, 24.0297)
 
 
