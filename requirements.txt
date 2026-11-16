@@ -4,3 +4,4 @@ pydeck
 anthropic
 pydantic
 geopy
+google-genai

@@ -7,7 +7,7 @@ import pydeck as pdk
 import streamlit as st
 
 from garantovano import config, data
-from garantovano.match import AnthropicClassifier, is_emergency_text, match
+from garantovano.match import default_classifier, is_emergency_text, match
 from garantovano.search import search, settlement_centroid
 
 st.set_page_config(page_title="Гарантовано", page_icon="🩺", layout="centered")
@@ -32,7 +32,7 @@ def geocode(address: str, settlement: str):
 
 def run_match(text: str):
     try:
-        return match(text, packages, AnthropicClassifier())
+        return match(text, packages, default_classifier())
     except Exception:  # D1 not merged yet / no key / network -> manual picker (fail closed)
         return None
 
