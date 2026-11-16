@@ -20,6 +20,19 @@ GEMMA_MODEL = os.getenv("GARANTOVANO_GEMMA_MODEL", GEMMA_MODEL_DEFAULT)
 def gemma_model() -> str:
     """Read at call time: Streamlit Cloud applies changed Secrets to env without restarting the process."""
     return os.getenv("GARANTOVANO_GEMMA_MODEL", GEMMA_MODEL_DEFAULT)
+
+
+# One retry on another model when Google says "overloaded" (503) or "rate limited" (429).
+GEMMA_FALLBACK_CODES = frozenset({429, 503})
+_FALLBACK_PAIR = ("gemini-3.5-flash-lite", "gemini-3.8-flash")
+
+
+def gemma_fallback_model(primary: str) -> str:
+    """GARANTOVANO_GEMMA_FALLBACK if set, else the other model of the pair (never the primary itself)."""
+    explicit = os.getenv("GARANTOVANO_GEMMA_FALLBACK")
+    if explicit:
+        return explicit
+    return _FALLBACK_PAIR[1] if primary == _FALLBACK_PAIR[0] else _FALLBACK_PAIR[0]
 LLM_TIMEOUT_S = float(os.getenv("GARANTOVANO_LLM_TIMEOUT", "15"))
 MIN_CONFIDENCE = 0.6
 MAX_PACKAGES = 3

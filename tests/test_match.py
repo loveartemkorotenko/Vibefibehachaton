@@ -439,3 +439,39 @@ def test_only_ambulance_package_falls_back_to_picker_with_103():
     pk = {**PACKAGES, "2": Package("2", "Екстрена медична допомога", "")}
     result = match("Інсульт", pk, FakeLLM(["2"], True, 0.9))
     assert result.needs_picker and result.package_ids == () and result.emergency
+
+
+# --- fallback model on 503/429 ----------------------------------------------------------------
+def _api_error(code):
+    from google.genai import errors
+    return errors.APIError(code, {"error": {"code": code, "message": "x", "status": "x"}})
+
+
+def _ok_reply():
+    from google.genai import types
+    return types.GenerateContentResponse(candidates=[types.Candidate(
+        content=types.Content(role="model", parts=[types.Part(
+            text='{"package_ids": ["35"], "emergency": false, "confidence": 0.9}')]),
+        finish_reason=types.FinishReason.STOP)])
+
+
+@pytest.mark.parametrize("code", [503, 429])
+def test_overloaded_model_retries_once_on_fallback(gemma, monkeypatch, code):
+    monkeypatch.delenv("GARANTOVANO_GEMMA_FALLBACK", raising=False)
+    gemma.models.generate_content.side_effect = [_api_error(code), _ok_reply()]
+    result = match("вагітність", PACKAGES, GemmaClassifier(model="gemini-3.5-flash-lite"))
+    assert result.package_ids == ("35",) and not result.needs_picker
+    models = [c.kwargs["model"] for c in gemma.models.generate_content.call_args_list]
+    assert models == ["gemini-3.5-flash-lite", "gemini-3.8-flash"]
+
+
+def test_fallback_failure_still_fails_closed(gemma):
+    gemma.models.generate_content.side_effect = [_api_error(503), _api_error(503)]
+    result = match("ІНСУЛЬТ", PACKAGES, GemmaClassifier(model="gemini-3.8-flash"))
+    assert result.needs_picker and result.emergency and gemma.models.generate_content.call_count == 2
+
+
+def test_other_api_errors_do_not_retry(gemma):
+    gemma.models.generate_content.side_effect = [_api_error(404)]
+    assert match("вагітність", PACKAGES, GemmaClassifier(model="x")).needs_picker
+    assert gemma.models.generate_content.call_count == 1

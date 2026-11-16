@@ -111,12 +111,25 @@ class GemmaClassifier:
         from google import genai
         from google.genai import types
 
+        from google.genai import errors
+
         client = genai.Client(http_options=types.HttpOptions(timeout=int(self.timeout_s * 1000)))
-        response = client.models.generate_content(
-            model=self.model,
-            contents=self.build_prompt(text, packages),
-            config=types.GenerateContentConfig(temperature=0, max_output_tokens=256),
-        )
+        prompt = self.build_prompt(text, packages)
+
+        def generate(model: str):
+            return client.models.generate_content(
+                model=model, contents=prompt,
+                config=types.GenerateContentConfig(temperature=0, max_output_tokens=256),
+            )
+
+        try:
+            response = generate(self.model)
+        except errors.APIError as exc:
+            fallback = config.gemma_fallback_model(self.model)
+            if exc.code not in config.GEMMA_FALLBACK_CODES or fallback == self.model:
+                raise
+            _log.warning("LLM %s returned %s, retrying once on %s", self.model, exc.code, fallback)
+            response = generate(fallback)  # any error here -> match() -> picker
         feedback = response.prompt_feedback
         if feedback and (
             feedback.block_reason not in (None, types.BlockedReason.BLOCKED_REASON_UNSPECIFIED)
