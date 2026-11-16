@@ -44,6 +44,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Check the local catalog and API-key presence; do not call the API.",
     )
     args = parser.parse_args(argv)
+    provider = config.LLM_PROVIDER
+    if provider not in KEY_ENV:
+        print("UNVERIFIED: unsupported configured provider; no API calls made.")
+        return 2
+    key_names = KEY_ENV[provider]
+    has_key = any(bool(os.getenv(name, "").strip()) for name in key_names)
+    print(f"Provider under test: {provider} (set GARANTOVANO_PROVIDER to change).")
     try:
         packages = load_packages()
     except Exception:
@@ -52,10 +59,6 @@ def main(argv: list[str] | None = None) -> int:
     if not all(pid in packages for _, ids, _ in CASES for pid in ids):
         print("UNVERIFIED: expected fixture IDs are missing from the catalog.")
         return 2
-    provider = config.LLM_PROVIDER
-    key_names = KEY_ENV.get(provider, KEY_ENV["gemma"])
-    has_key = any(os.getenv(name, "").strip() for name in key_names)
-    print(f"Provider under test: {provider} (set GARANTOVANO_PROVIDER to change).")
     if args.check_only:
         print("Catalog prerequisites: OK.")
         print(f"API key present ({' or '.join(key_names)}): {'yes' if has_key else 'no'}.")

@@ -117,6 +117,16 @@ class GemmaClassifier:
             contents=self.build_prompt(text, packages),
             config=types.GenerateContentConfig(temperature=0, max_output_tokens=256),
         )
+        feedback = response.prompt_feedback
+        if feedback and (
+            feedback.block_reason not in (None, types.BlockedReason.BLOCKED_REASON_UNSPECIFIED)
+            or any(rating.blocked for rating in feedback.safety_ratings or [])
+        ):
+            raise ValueError("Classification unavailable")
+        candidates = response.candidates or []
+        if (len(candidates) != 1 or candidates[0].finish_reason != types.FinishReason.STOP
+                or any(rating.blocked for rating in candidates[0].safety_ratings or [])):
+            raise ValueError("Classification unavailable")
         found = re.search(r"\{.*\}", response.text or "", re.DOTALL)
         if not found:
             raise ValueError("No JSON in model reply")
