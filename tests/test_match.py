@@ -291,6 +291,15 @@ def test_gemma_bad_reply_fails_closed(gemma, reply):
     assert result.reason == "llm_error" and result.needs_picker and result.emergency
 
 
+def test_gemma_explicit_abstention_is_picker_not_api_error(gemma):
+    gemma.models.generate_content.return_value = gemma_response(
+        '{"package_ids": [], "emergency": false, "confidence": 0}'
+    )
+    result = match("asdf qwerty", PACKAGES, GemmaClassifier())
+    assert result.needs_picker and not result.package_ids
+    assert result.reason == "invalid"
+
+
 def test_gemma_api_error_fails_closed(gemma):
     gemma.models.generate_content.side_effect = RuntimeError("quota")
     assert match("вагітність", PACKAGES, GemmaClassifier()).needs_picker
