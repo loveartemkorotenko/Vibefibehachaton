@@ -65,7 +65,7 @@ address = st.text_input("Адреса або район (необов'язков
 if st.button("Знайти", type="primary") and text.strip():
     ss.result = run_match(text)
     ss.searched_text = text
-    ss.pop("picked", None)
+    ss.search_id = ss.get("search_id", 0) + 1  # fresh picker per search (#15): no stale packages
 
 if "searched_text" in ss:
     result = ss.result
@@ -77,7 +77,7 @@ if "searched_text" in ss:
     if result is None or result.needs_picker:
         st.info("Не вдалося точно визначити послугу — оберіть її зі списку.")
         ids = st.multiselect("Послуга за ПМГ", list(packages), default=[i for i in ids if i in packages],
-                             format_func=lambda i: packages[i].name, key="picked",
+                             format_func=lambda i: packages[i].name, key=f"picked-{ss.get('search_id', 0)}",
                              max_selections=config.MAX_PACKAGES)
     else:
         st.success("Безкоштовно за ПМГ: " + " · ".join(packages[i].name for i in ids if i in packages))
@@ -112,7 +112,8 @@ if "searched_text" in ss:
             for h in hits:
                 f = h.facility
                 with st.container(border=True):
-                    st.markdown(f"**{f.legal_entity_name}**  \n{f.division_name}")
+                    st.markdown(f"**{f.division_name}**")
+                    st.caption(f.legal_entity_name)
                     st.write(f"📍 {f.address} · {h.distance_km:.1f} км")
                     if f.phone:
                         st.markdown(f"📞 [{f.phone}](tel:{f.phone.replace(' ', '')})")
