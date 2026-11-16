@@ -1,0 +1,13 @@
+{
+  "built_at": "2026-11-16T14:48:21+00:00",
+  "sources": {
+    "packages": "https://data.gov.ua/dataset/f353f9e1-0900-4a4e-bab0-4f2f267a8459/resource/ae5179be-d154-4863-9063-b7a916853c6b/download/pmg_package_groups.csv",
+    "contracts": "https://data.gov.ua/dataset/f353f9e1-0900-4a4e-bab0-4f2f267a8459/resource/28c2d31f-59a4-418d-b72e-f97d4a73c66d/download/pmg_contracts_package_addresses.csv",
+    "divisions": "https://data.gov.ua/dataset/46fa40f9-875b-41ee-8d6f-be2cc3e40ace/resource/d98f7120-59fd-47f6-a5a5-e7f220bebc53/download/pmg_legal_entity_divisions_info.csv"
+  },
+  "contract_rows": 25333,
+  "contract_rows_with_coords": 25041,
+  "coverage": 0.9885,
+  "divisions_out": 10189,
+  "packages": 85
+}
