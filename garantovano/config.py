@@ -13,7 +13,13 @@ META_JSON = DATA_DIR / "meta.json"
 MODEL = os.getenv("GARANTOVANO_MODEL", "claude-opus-5-5")
 # Which LLM adapter the app uses: "gemma" (Google Gemini API, key GEMINI_API_KEY) or "anthropic" (ANTHROPIC_API_KEY).
 LLM_PROVIDER = os.getenv("GARANTOVANO_PROVIDER", "gemma")
-GEMMA_MODEL = os.getenv("GARANTOVANO_GEMMA_MODEL", "gemma-3-27b-it")
+GEMMA_MODEL_DEFAULT = "gemini-3.8-flash"  # Gemma is not served for our AI Studio key; Gemini Flash is (16.11)
+GEMMA_MODEL = os.getenv("GARANTOVANO_GEMMA_MODEL", GEMMA_MODEL_DEFAULT)
+
+
+def gemma_model() -> str:
+    """Read at call time: Streamlit Cloud applies changed Secrets to env without restarting the process."""
+    return os.getenv("GARANTOVANO_GEMMA_MODEL", GEMMA_MODEL_DEFAULT)
 LLM_TIMEOUT_S = float(os.getenv("GARANTOVANO_LLM_TIMEOUT", "15"))
 MIN_CONFIDENCE = 0.6
 MAX_PACKAGES = 3

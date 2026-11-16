@@ -90,8 +90,8 @@ class GemmaClassifier:
     static rules and the delimited, untrusted user text go in one message and the reply is parsed
     and schema-validated here; anything off -> exception -> match() falls back to the picker."""
 
-    def __init__(self, model: str = config.GEMMA_MODEL, timeout_s: float = config.LLM_TIMEOUT_S) -> None:
-        self.model = model
+    def __init__(self, model: str | None = None, timeout_s: float = config.LLM_TIMEOUT_S) -> None:
+        self.model = model or config.gemma_model()
         self.timeout_s = timeout_s
 
     @staticmethod
