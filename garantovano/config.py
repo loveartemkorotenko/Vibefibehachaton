@@ -45,3 +45,31 @@ FLAGSHIP_EXAMPLES = (
     "Мамі потрібна мамографія",
 )
 DISCLAIMER = "Договір з НСЗУ не гарантує вільного місця сьогодні — зателефонуйте перед візитом."
+
+# UI: one-tap examples (label, query); each runs the search at once.
+EXAMPLES = (
+    ("🤰 Вагітність", FLAGSHIP_EXAMPLES[0]),
+    ("🦷 Ветеран: зуби", FLAGSHIP_EXAMPLES[1]),
+    ("🩻 Мамографія", FLAGSHIP_EXAMPLES[2]),
+    ("🧠 Інсульт", "У тата інсульт, куди їхати?"),
+)
+DEFAULT_REGION = "М.КИЇВ"
+NEONATAL_PACKAGE_ID = "8"
+
+# Deterministic fast path, checked before the model: common needs -> NSZU package ids.
+# Rule = (groups, package_ids): every group must match (any lower-case stem from it is in the text).
+# The model handles everything else. Ids verified against data/packages.csv on 16.11.2026.
+KEYWORD_RULES = (
+    ((("вагітн", "на облік"),), ("35",)),
+    ((("народж", "пологи", "пологах", "пологов"),), ("7",)),
+    ((("ветеран", "убд", "захисни", "військов"), ("зуб", "протез")), ("66",)),
+    ((("мамограф",),), ("10",)),
+    ((("колоноскоп",),), ("13",)),
+    ((("гастроскоп", "фгдс", "езофаго"),), ("12",)),
+    ((("гемодіаліз", "діаліз"),), ("16",)),
+    ((("хіміотерап",),), ("17",)),
+    ((("інсульт",),), ("5",)),
+    ((("інфаркт",),), ("6",)),
+    ((("психолог", "психіатр", "депрес", "птср"),), ("72",)),
+    ((("реабіліт",),), ("54",)),
+)

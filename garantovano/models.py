@@ -42,7 +42,7 @@ class MatchResult:
     package_ids: tuple[str, ...]   # 0..MAX_PACKAGES ids that exist in packages.csv
     emergency: bool                # True -> UI shows "Дзвоніть 103" before anything else
     needs_picker: bool             # True -> UI shows the manual package picker (fail closed)
-    reason: str                    # "ok" | "empty" | "too_long" | "llm_error" | "invalid" | "unknown_id" | "low_confidence"
+    reason: str                    # "rule" | "ok" | "empty" | "too_long" | "llm_error" | "invalid" | "unknown_id" | "low_confidence"
 
 
 @dataclass(frozen=True)

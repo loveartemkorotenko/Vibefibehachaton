@@ -1,16 +1,26 @@
-"""Streamlit UI only — no business logic here.   OWNER: Акім (issue "A2").
+"""Main page «Пошук допомоги». UI only: understanding, search and data live in garantovano/.
 
-Run: streamlit run app.py   (needs ANTHROPIC_API_KEY in env or .streamlit/secrets.toml)
+HTML/CSS here is static styling only (no user or dataset text goes into unsafe HTML).
 """
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
 
 from garantovano import config, data
-from garantovano.match import default_classifier, is_emergency_text, match
+from garantovano.match import default_classifier, is_emergency_text
+from garantovano.rules import understand
 from garantovano.search import search, settlement_centroid
 
 st.set_page_config(page_title="Гарантовано", page_icon="🩺", layout="centered")
+st.markdown("""<style>
+.block-container {max-width: 880px; padding-top: 2.2rem;}
+h1 {font-size: 2.7rem !important; letter-spacing: -0.5px; margin-bottom: 0 !important;}
+.g-sub {font-size: 1.12rem; color: #3E4C50; margin: 0.2rem 0 1.1rem;}
+.g-sos {background: #FDECEC; border: 2px solid #C5221F; border-radius: 12px; padding: 14px 18px;
+        font-size: 1.2rem; font-weight: 700; color: #8A1C14; margin: 0.4rem 0 0.8rem;}
+.g-pay {background: #FFF4E0; border-radius: 10px; padding: 10px 14px; font-weight: 600; color: #6B3E00;}
+.g-trust {font-size: 0.85rem; color: #5B6B6F;}
+</style>""", unsafe_allow_html=True)
 
 
 @st.cache_resource
@@ -30,118 +40,147 @@ def geocode(address: str, settlement: str):
         return None
 
 
-def run_match(text: str):
+def run_understand(text: str):
     try:
-        return match(text, packages, default_classifier())
-    except Exception:  # D1 not merged yet / no key / network -> manual picker (fail closed)
+        return understand(text, packages, default_classifier())
+    except Exception:  # any surprise -> manual picker (fail closed)
         return None
+
+
+def nice(name: str) -> str:
+    """'ІВАНО-ФРАНКІВСЬКА' -> 'Івано-Франківська' (data is upper-case)."""
+    return "-".join(part[:1] + part[1:].lower() for part in name.split("-"))
+
+
+def region_label(region: str) -> str:
+    return f"м. {nice(region[2:])}" if region.startswith("М.") else f"{nice(region)} обл."
+
+
+def km(value: float) -> str:
+    return f"{value:.1f} км".replace(".", ",")
+
+
+def show_results(hits, package_id: str, origin) -> None:
+    if not hits:
+        st.warning("Поруч не знайдено закладів з цією послугою. "
+                   f"Гаряча лінія НСЗУ {config.NSZU_HOTLINE} підкаже, куди звернутися.")
+        return
+    st.markdown(f"**Знайдено {len(hits)} закладів поруч** · найближчий — {km(hits[0].distance_km)}")
+    df = pd.DataFrame([{"lat": h.facility.lat, "lng": h.facility.lng, "name": h.facility.division_name,
+                        "addr": h.facility.address} for h in hits])
+    st.pydeck_chart(pdk.Deck(
+        map_style=None,
+        initial_view_state=pdk.ViewState(latitude=origin[0], longitude=origin[1], zoom=11),
+        layers=[
+            pdk.Layer("ScatterplotLayer", df, get_position="[lng, lat]", get_radius=260,
+                      get_fill_color=[31, 111, 235, 210], pickable=True),
+            pdk.Layer("ScatterplotLayer", pd.DataFrame([{"lat": origin[0], "lng": origin[1]}]),
+                      get_position="[lng, lat]", get_radius=180, get_fill_color=[220, 60, 40, 230]),
+        ],
+        tooltip={"text": "{name}\n{addr}"},
+    ), height=320)
+    for h in hits:
+        f = h.facility
+        with st.container(border=True):
+            title, dist = st.columns([5, 1])
+            title.markdown(f"**{f.division_name}**")
+            dist.markdown(f"**{km(h.distance_km)}**")
+            st.caption(f.legal_entity_name)
+            links = [f"📍 {f.address}"]
+            if f.phone:
+                links.append(f"[📞 {f.phone}](tel:{f.phone.replace(' ', '')})")
+            links.append(f"[🗺 Маршрут](https://www.google.com/maps/dir/?api=1&destination={f.lat},{f.lng})")
+            st.markdown(" · ".join(links))
+            if config.NEONATAL_PACKAGE_ID in f.package_ids and package_id != config.NEONATAL_PACKAGE_ID:
+                st.caption("👶 є неонатальна допомога для складних випадків")
 
 
 packages, facilities, rights, meta = load_all()
 ss = st.session_state
 
+# 1. Promise + need ---------------------------------------------------------------------------------
 st.title("Гарантовано")
-st.caption("Де вам безкоштовно допоможуть за Програмою медичних гарантій — за відкритими даними НСЗУ.")
+st.markdown('<p class="g-sub">Опишіть своїми словами, що вам потрібно, — покажемо найближчі заклади, '
+            'де це <b>безкоштовно</b> за Програмою медичних гарантій, і що робити, якщо просять гроші.</p>',
+            unsafe_allow_html=True)
 
-# 1. Need -----------------------------------------------------------------------------------------
-st.write("Приклади:")
-cols = st.columns(len(config.FLAGSHIP_EXAMPLES))
-for col, ex in zip(cols, config.FLAGSHIP_EXAMPLES):
-    if col.button(ex[:40] + ("…" if len(ex) > 40 else ""), key=f"ex-{ex}", use_container_width=True):
-        ss.need = ex
-text = st.text_area("Що вам потрібно?", key="need", placeholder=config.FLAGSHIP_EXAMPLES[0],
-                    max_chars=config.MAX_INPUT_CHARS)
+cols = st.columns(len(config.EXAMPLES))
+for col, (label, query) in zip(cols, config.EXAMPLES):
+    if col.button(label, key=f"ex-{label}", use_container_width=True):
+        ss.need = query
+        ss.run_now = True  # one tap = search, never a stale result under a new question
+text = st.text_area("Що вам потрібно?", key="need", height=90, max_chars=config.MAX_INPUT_CHARS,
+                    placeholder="Напр.: «Мамі потрібна мамографія» або «Я вагітна, де народжувати?»")
 
-# 2. Location -------------------------------------------------------------------------------------
+# 2. Where --------------------------------------------------------------------------------------------
 regions = sorted({f.region for f in facilities})
-c1, c2 = st.columns(2)
-region = c1.selectbox("Область", regions, index=regions.index("М.КИЇВ") if "М.КИЇВ" in regions else 0)
+c1, c2, c3 = st.columns([1, 1, 1.3])
+region = c1.selectbox("Область", regions, format_func=region_label,
+                      index=regions.index(config.DEFAULT_REGION) if config.DEFAULT_REGION in regions else 0)
 settlements = sorted({f.settlement for f in facilities if f.region == region})
 default_city = region.removeprefix("М.")
-settlement = c2.selectbox("Населений пункт", settlements,
+settlement = c2.selectbox("Місто / село", settlements, format_func=nice,
                           index=settlements.index(default_city) if default_city in settlements else 0)
-address = st.text_input("Адреса або район (необов'язково)", placeholder="напр. Оболонський проспект, 1")
+address = c3.text_input("Адреса (необов'язково)", placeholder="Оболонський проспект, 1")
+st.caption("Адресу ми передаємо лише OpenStreetMap, щоб порахувати відстань.")
 
-if st.button("Знайти", type="primary") and text.strip():
-    ss.result = run_match(text)
+go = st.button("Знайти безкоштовну допомогу", type="primary", use_container_width=True)
+if (go or ss.pop("run_now", False)) and text.strip():
+    ss.result = run_understand(text)
     ss.searched_text = text
-    ss.search_id = ss.get("search_id", 0) + 1  # fresh picker per search (#15): no stale packages
+    ss.search_id = ss.get("search_id", 0) + 1  # fresh picker per search (#15)
+if ss.get("searched_text") is not None and ss.searched_text != text:
+    del ss["searched_text"]  # the question changed: hide answers to the old one
 
+# 3. Answer -------------------------------------------------------------------------------------------
 if "searched_text" in ss:
     result = ss.result
     if (result and result.emergency) or is_emergency_text(ss.searched_text):
-        st.error(f"🚑 Якщо зараз є загрозливі симптоми — дзвоніть **{config.EMERGENCY_NUMBER}**. Не їдьте самі.")
+        st.markdown(f'<div class="g-sos">🚑 Якщо зараз є загрозливі симптоми — дзвоніть '
+                    f'{config.EMERGENCY_NUMBER}. Не їдьте самі.</div>', unsafe_allow_html=True)
 
-    # 3. Packages (LLM result or manual picker, fail closed) -------------------------------------
-    ids = list(result.package_ids) if result else []
-    if result is None or result.needs_picker:
+    auto = [i for i in (result.package_ids if result and not result.needs_picker else ()) if i in packages]
+    if not auto:
         st.info("Не вдалося точно визначити послугу — оберіть її зі списку.")
-        ids = st.multiselect("Послуга за ПМГ", list(packages), default=[i for i in ids if i in packages],
-                             format_func=lambda i: packages[i].name, key=f"picked-{ss.get('search_id', 0)}",
-                             max_selections=config.MAX_PACKAGES)
-    else:
-        st.success("Безкоштовно за ПМГ: " + " · ".join(packages[i].name for i in ids if i in packages))
+    ids = st.multiselect("Безкоштовні послуги за ПМГ" + (" · можна змінити" if auto else ""),
+                         list(packages), default=auto, format_func=lambda i: packages[i].name,
+                         key=f"picked-{ss.get('search_id', 0)}", max_selections=config.MAX_PACKAGES)
 
     if ids:
-        # 4. Search -----------------------------------------------------------------------------
         centroid = settlement_centroid(facilities, region, settlement)
         geo = geocode(address.strip(), settlement) if address.strip() else None
         if address.strip() and geo is None:
             st.caption("Адресу не знайдено — рахуємо відстань від центру населеного пункту.")
         origin = geo or centroid
-        hits = search(facilities, ids, origin, region=region) if origin else []
+        # One tab per service: a facility never has to hold every package at once.
+        tabs = st.tabs([packages[p].name[:42] for p in ids]) if len(ids) > 1 else [st.container()]
+        for tab, pid in zip(tabs, ids):
+            with tab:
+                show_results(search(facilities, [pid], origin, region=region) if origin else [], pid, origin)
 
-        if not hits:
-            st.warning("У цій області не знайдено закладів з усіма обраними послугами. "
-                       f"Зателефонуйте на гарячу лінію НСЗУ {config.NSZU_HOTLINE}.")
-        else:
-            df = pd.DataFrame([{"lat": h.facility.lat, "lng": h.facility.lng,
-                                "name": h.facility.legal_entity_name, "addr": h.facility.address} for h in hits])
-            st.pydeck_chart(pdk.Deck(
-                map_style=None,
-                initial_view_state=pdk.ViewState(latitude=origin[0], longitude=origin[1], zoom=10),
-                layers=[
-                    pdk.Layer("ScatterplotLayer", df, get_position="[lng, lat]", get_radius=300,
-                              get_fill_color=[220, 40, 60, 200], pickable=True),
-                    pdk.Layer("ScatterplotLayer", pd.DataFrame([{"lat": origin[0], "lng": origin[1]}]),
-                              get_position="[lng, lat]", get_radius=200, get_fill_color=[30, 110, 230, 220]),
-                ],
-                tooltip={"text": "{name}\n{addr}"},
-            ))
-            names = "; ".join(packages[p].name for p in ids if p in packages)
-            for h in hits:
-                f = h.facility
-                with st.container(border=True):
-                    st.markdown(f"**{f.division_name}**")
-                    st.caption(f.legal_entity_name)
-                    st.markdown(f"📍 {f.address} · {h.distance_km:.1f} км · [Маршрут ↗]"
-                                f"(https://www.google.com/maps/dir/?api=1&destination={f.lat},{f.lng})")
-                    if f.phone:
-                        st.markdown(f"📞 [{f.phone}](tel:{f.phone.replace(' ', '')})")
-                    st.caption("Договір НСЗУ: " + names)
-                    if "8" in f.package_ids and "8" not in ids:
-                        st.caption("👶 є неонатальна допомога")
-
-        # 5. Rights -----------------------------------------------------------------------------
         st.subheader("Ваші права")
         for pid in ids:
             r = rights.get(pid)
             if not r:
                 continue
-            with st.expander(r["title"], expanded=len(ids) == 1):
+            with st.expander(r["title"], expanded=pid == ids[0]):
                 if r.get("emergency_note"):
                     st.error(r["emergency_note"])
                 st.markdown(f"**Кому:** {r['eligible']}")
                 st.markdown(f"**Направлення:** {r['referral_needed']}")
-                for label, key in (("Що входить безкоштовно", "included"), ("Що взяти з собою", "bring"),
-                                   ("Якщо просять гроші", "if_asked_to_pay")):
+                for label, key in (("Що входить безкоштовно", "included"), ("Що взяти з собою", "bring")):
                     if r.get(key):
                         st.markdown(f"**{label}:**\n" + "\n".join(f"- {x}" for x in r[key]))
+                st.markdown(f'<div class="g-pay">Просять гроші за цю послугу? Дзвоніть {config.NSZU_HOTLINE} '
+                            '(НСЗУ) — це безкоштовно.</div>', unsafe_allow_html=True)
+                if r.get("if_asked_to_pay"):
+                    st.markdown("\n".join(f"- {x}" for x in r["if_asked_to_pay"]))
                 srcs = r.get("sources") or []
                 if srcs:
                     st.caption("Джерела: " + " · ".join(f"[{s.get('title') or s['url']}]({s['url']})" for s in srcs))
-        st.info(config.DISCLAIMER)
+        st.caption(config.DISCLAIMER)
 
 st.divider()
-st.caption(f"Дані: НСЗУ, data.gov.ua · зібрано {meta['built_at'][:10]} · {meta['divisions_out']} закладів · "
-           f"гаряча лінія НСЗУ {config.NSZU_HOTLINE}")
+st.markdown(f'<p class="g-trust">Дані НСЗУ з data.gov.ua · зібрано {meta["built_at"][:10]} · '
+            f'{meta["divisions_out"]} закладів · гаряча лінія НСЗУ {config.NSZU_HOTLINE}</p>',
+            unsafe_allow_html=True)
