@@ -114,7 +114,8 @@ if "searched_text" in ss:
                 with st.container(border=True):
                     st.markdown(f"**{f.division_name}**")
                     st.caption(f.legal_entity_name)
-                    st.write(f"📍 {f.address} · {h.distance_km:.1f} км")
+                    st.markdown(f"📍 {f.address} · {h.distance_km:.1f} км · [Маршрут ↗]"
+                                f"(https://www.google.com/maps/dir/?api=1&destination={f.lat},{f.lng})")
                     if f.phone:
                         st.markdown(f"📞 [{f.phone}](tel:{f.phone.replace(' ', '')})")
                     st.caption("Договір НСЗУ: " + names)
