@@ -14,6 +14,7 @@ import sys
 # Direct script execution puts scripts/, rather than the project, on sys.path.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from garantovano import config
 from garantovano.data import load_packages
 
 
@@ -40,6 +41,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Check the local catalog and API-key presence; do not call the API.",
     )
     args = parser.parse_args(argv)
+    provider = config.LLM_PROVIDER
+    if provider not in ("gemma", "anthropic"):
+        print("UNVERIFIED: unsupported configured provider; no API calls made.")
+        return 2
+    key_names = (("ANTHROPIC_API_KEY",) if provider == "anthropic"
+                 else ("GEMINI_API_KEY", "GOOGLE_API_KEY"))
+    has_key = any(bool(os.getenv(name, "").strip()) for name in key_names)
+    print(f"Provider: {provider}.")
     try:
         packages = load_packages()
     except Exception:
@@ -48,20 +57,19 @@ def main(argv: list[str] | None = None) -> int:
     if not all(pid in packages for _, ids, _ in CASES for pid in ids):
         print("UNVERIFIED: expected fixture IDs are missing from the catalog.")
         return 2
-    has_key = bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
     if args.check_only:
         print("Catalog prerequisites: OK.")
         print(f"API key present: {'yes' if has_key else 'no'}.")
         print("UNVERIFIED: no API calls made; model accuracy was not tested.")
         return 0 if has_key else 2
     if not has_key:
-        print("UNVERIFIED: ANTHROPIC_API_KEY is missing; live smoke was skipped.")
+        print(f"UNVERIFIED: {' or '.join(key_names)} is missing; live smoke was skipped.")
         return 2
 
     try:
-        from garantovano.match import AnthropicClassifier, match
+        from garantovano.match import default_classifier, match
 
-        classifier = AnthropicClassifier()
+        classifier = default_classifier()
     except Exception:
         print("UNVERIFIED: classifier unavailable; check installed dependencies.")
         return 2
