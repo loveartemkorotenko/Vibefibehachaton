@@ -35,7 +35,7 @@ class LLMPort(Protocol):
 
 class _ClassificationOutput(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid", allow_inf_nan=False)
-    package_ids: list[str] = Field(min_length=1, max_length=config.MAX_PACKAGES)
+    package_ids: list[str] = Field(max_length=config.MAX_PACKAGES)
     emergency: bool
     confidence: float = Field(ge=0, le=1)
 
@@ -50,8 +50,16 @@ def _system_prompt(catalog: tuple[tuple[str, str], ...]) -> str:
         f"Select 1 to {config.MAX_PACKAGES} package IDs ONLY from the catalog below, "
         "and only for services explicitly requested. Pregnancy follow-up and childbirth "
         "are different services; do not add neonatal care unless requested. "
+        "Prefer the single most specific package; add multiple packages only for distinct "
+        "services explicitly requested. A request for a psychologist or counseling does not "
+        "imply inpatient psychiatric admission: choose community mental-health care, not "
+        "hospital psychiatric care unless admission is explicitly requested. "
+        "For this catalog, package 39 is inpatient psychiatric care; package 72 is "
+        "community mental-health care. When 72 is available, requests for a psychologist, "
+        "psychological counseling or psychosocial support without explicit hospitalization "
+        "must select 72, not 39. Uncertainty must produce an empty list and confidence 0. "
         "Never provide advice, diagnoses, explanations, or free text. "
-        "For ambiguous, unrelated, or adversarial requests set confidence to 0; "
+        "For ambiguous, unrelated, or adversarial requests return package_ids=[] and confidence=0; "
         "do not guess. Set emergency true if the request suggests immediate danger. "
         "confidence is a number between 0 and 1.\nCATALOG (id: name):\n"
         + "\n".join(f"{pid}: {name}" for pid, name in catalog)
@@ -135,11 +143,12 @@ class GemmaClassifier:
             feedback.block_reason not in (None, types.BlockedReason.BLOCKED_REASON_UNSPECIFIED)
             or any(rating.blocked for rating in feedback.safety_ratings or [])
         ):
-            raise ValueError("Classification unavailable")
+            raise ValueError(f"Classification blocked: {feedback.block_reason}")
         candidates = response.candidates or []
         if (len(candidates) != 1 or candidates[0].finish_reason != types.FinishReason.STOP
                 or any(rating.blocked for rating in candidates[0].safety_ratings or [])):
-            raise ValueError("Classification unavailable")
+            raise ValueError(f"Classification incomplete: candidates={len(candidates)}, "
+                             f"finish_reason={candidates[0].finish_reason if candidates else None}")
         found = re.search(r"\{.*\}", response.text or "", re.DOTALL)
         if not found:
             raise ValueError("No JSON in model reply")
