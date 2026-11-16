@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from math import isfinite
+import logging
 from typing import Mapping, Protocol
 
 import json
@@ -17,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from . import config
 from .models import LLMClassification, MatchResult, Package
+_log = logging.getLogger(__name__)
 
 
 class LLMPort(Protocol):
@@ -139,7 +141,9 @@ def match(text: str, packages: Mapping[str, Package], llm: LLMPort) -> MatchResu
         return _picker("too_long", emergency)
     try:
         raw = llm.classify(text, packages)
-    except Exception:
+    except Exception as exc:  # reason goes to server logs only (no user text, no key)
+        _log.warning("LLM classify failed (%s, model=%s): %s", type(exc).__name__,
+                     getattr(llm, "model", "?"), str(exc)[:300])
         return _picker("llm_error", emergency)
     if not isinstance(raw, LLMClassification):
         return _picker("invalid", emergency)
