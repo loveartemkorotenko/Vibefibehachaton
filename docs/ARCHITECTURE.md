@@ -41,7 +41,7 @@ Python modular monolith, ports and adapters, microservice-ready: each module can
 | Files | Owner | Issue |
 |---|---|---|
 | `garantovano/match.py`, `tests/test_match.py` | Діма | D1 |
-| `app.py` analytics tab + `garantovano/analytics.py` | Діма | D2 |
+| `pages/1_Де_бракує_допомоги.py`, `garantovano/analytics.py`, `scripts/smoke_match.py` | Діма | D2, D1 |
 | `garantovano/search.py`, `tests/test_search.py` | Акім | A1 |
 | `app.py` main flow, `.streamlit/`, deploy | Акім | A2, A3 |
 | `data/rights.json`, `docs/`, deck | Назар | N1, N3 |
