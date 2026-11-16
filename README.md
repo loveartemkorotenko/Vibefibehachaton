@@ -15,10 +15,14 @@ Open Data Hackathon, 16.11.2026 · дані НСЗУ з data.gov.ua · Python + 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # вставити ANTHROPIC_API_KEY
+cp .streamlit/secrets.toml.example .streamlit/secrets.toml   # вставити GEMINI_API_KEY
 pytest -q
 streamlit run app.py
 ```
+Модель за замовчуванням — Gemma 3 27B (Gemini API, ключ `GEMINI_API_KEY`). Перемкнути на Claude: `GARANTOVANO_PROVIDER=anthropic` + `ANTHROPIC_API_KEY`.
+
+Живий смоук-тест моделі (10 фраз, без показу тексту моделі): `GEMINI_API_KEY=... python scripts/smoke_match.py`.
+
 Оновити дані НСЗУ: `python scripts/ingest.py`.
 
 ## Команда і задачі

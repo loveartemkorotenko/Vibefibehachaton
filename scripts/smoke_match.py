@@ -17,6 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from garantovano import config
 from garantovano.data import load_packages
 
+# Key env vars per provider; the smoke test checks the provider the app really uses.
+KEY_ENV = {"gemma": ("GEMINI_API_KEY", "GOOGLE_API_KEY"), "anthropic": ("ANTHROPIC_API_KEY",)}
+
 
 # Exact smoke fixtures and expected outcomes from GitHub issue #2, not app rules.
 CASES = (
@@ -42,13 +45,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     provider = config.LLM_PROVIDER
-    if provider not in ("gemma", "anthropic"):
+    if provider not in KEY_ENV:
         print("UNVERIFIED: unsupported configured provider; no API calls made.")
         return 2
-    key_names = (("ANTHROPIC_API_KEY",) if provider == "anthropic"
-                 else ("GEMINI_API_KEY", "GOOGLE_API_KEY"))
+    key_names = KEY_ENV[provider]
     has_key = any(bool(os.getenv(name, "").strip()) for name in key_names)
-    print(f"Provider: {provider}.")
+    print(f"Provider under test: {provider} (set GARANTOVANO_PROVIDER to change).")
     try:
         packages = load_packages()
     except Exception:
@@ -59,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.check_only:
         print("Catalog prerequisites: OK.")
-        print(f"API key present: {'yes' if has_key else 'no'}.")
+        print(f"API key present ({' or '.join(key_names)}): {'yes' if has_key else 'no'}.")
         print("UNVERIFIED: no API calls made; model accuracy was not tested.")
         return 0 if has_key else 2
     if not has_key:
@@ -69,7 +71,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         from garantovano.match import default_classifier, match
 
-        classifier = default_classifier()
+        classifier = default_classifier()  # the same adapter app.py uses
     except Exception:
         print("UNVERIFIED: classifier unavailable; check installed dependencies.")
         return 2

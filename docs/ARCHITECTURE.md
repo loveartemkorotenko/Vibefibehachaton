@@ -18,14 +18,16 @@ Python modular monolith, ports and adapters, microservice-ready: each module can
   └──────┬─────────┘ └───────────┘ └────────▲─────────┘
          │ LLMPort                          │
   ┌──────▼──────────────┐       ┌───────────┴───────────┐
-  │ AnthropicClassifier │       │ scripts/ingest.py     │
-  │ (Claude API adapter)│       │ data.gov.ua → data/   │
+  │ GemmaClassifier     │       │ scripts/ingest.py     │
+  │ (default, Gemini API│       │ data.gov.ua → data/   │
+  │ AnthropicClassifier │       │                       │
+  │ (fallback, Claude)  │       │                       │
   └─────────────────────┘       └───────────────────────┘
    Діма                          done (weekly NSZU refresh)
 ```
 
 ## Flow (flagship: «Я вагітна, Оболонь, де народжувати безкоштовно?»)
-1. `match.match(text, packages, AnthropicClassifier())`:
+1. `match.match(text, packages, default_classifier())` — Gemma 3 27B by default (`GARANTOVANO_PROVIDER=anthropic` switches to Claude):
    - keyword emergency check (deterministic);
    - the model chooses ids from the package list only;
    - validation: ids exist, 1–3 of them, confidence ≥ 0.6. Otherwise `needs_picker=True`.
