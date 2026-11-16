@@ -31,6 +31,10 @@ EMERGENCY_KEYWORDS = (
     "без свідомості", "біль у грудях", "болить серце", "судом", "отруєн", "перекосило обличчя",
 )
 EMERGENCY_NUMBER = "103"
+# Ambulance packages ("Екстрена медична допомога", incl. COVID variant): served by 103, not by a facility
+# you walk into, and never contracted together with hospital packages -> combining them yields "not found".
+# The 103 banner already covers them, so match() drops them from the model's answer.
+AMBULANCE_PACKAGE_IDS = frozenset({"2", "28"})
 NSZU_HOTLINE = "16-77"
 
 # Search
