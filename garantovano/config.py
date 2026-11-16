@@ -11,6 +11,9 @@ META_JSON = DATA_DIR / "meta.json"
 
 # LLM (need -> package ids). Model is configurable; Haiku 5.5 ("claude-haiku-5-5") is the cheaper/faster option.
 MODEL = os.getenv("GARANTOVANO_MODEL", "claude-opus-5-5")
+# Which LLM adapter the app uses: "gemma" (Google Gemini API, key GEMINI_API_KEY) or "anthropic" (ANTHROPIC_API_KEY).
+LLM_PROVIDER = os.getenv("GARANTOVANO_PROVIDER", "gemma")
+GEMMA_MODEL = os.getenv("GARANTOVANO_GEMMA_MODEL", "gemma-3-27b-it")
 LLM_TIMEOUT_S = float(os.getenv("GARANTOVANO_LLM_TIMEOUT", "15"))
 MIN_CONFIDENCE = 0.6
 MAX_PACKAGES = 3
