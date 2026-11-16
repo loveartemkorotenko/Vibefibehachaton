@@ -5,20 +5,28 @@ to the manual picker; deterministic emergency detection always runs first.
 """
 from __future__ import annotations
 
+import json
+import logging
+import re
 from functools import lru_cache
 from math import isfinite
-import logging
 from typing import Mapping, Protocol
 
-import json
-import re
-
 import anthropic
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from . import config
 from .models import LLMClassification, MatchResult, Package
+
 _log = logging.getLogger(__name__)
+
+
+def _failure_detail(exc: Exception, text: str) -> str:
+    """What went wrong, without the person's text: validation errors keep only field + error type
+    (pydantic would otherwise echo the rejected value), other messages get the text masked."""
+    if isinstance(exc, ValidationError):
+        return str([(".".join(map(str, e["loc"])), e["type"]) for e in exc.errors(include_input=False)])
+    return str(exc).replace(text, "‹user text›")[:300]
 
 
 class LLMPort(Protocol):
@@ -145,7 +153,7 @@ def match(text: str, packages: Mapping[str, Package], llm: LLMPort) -> MatchResu
         raw = llm.classify(text, packages)
     except Exception as exc:  # reason goes to server logs only (no user text, no key)
         _log.warning("LLM classify failed (%s, model=%s): %s", type(exc).__name__,
-                     getattr(llm, "model", "?"), str(exc)[:300])
+                     getattr(llm, "model", "?"), _failure_detail(exc, text))
         return _picker("llm_error", emergency)
     if not isinstance(raw, LLMClassification):
         return _picker("invalid", emergency)
