@@ -37,13 +37,6 @@ def run_match(text: str):
         return None
 
 
-def emergency_text(text: str) -> bool:
-    try:
-        return is_emergency_text(text)
-    except NotImplementedError:  # D1 not merged yet: same keyword rule straight from config
-        return any(k in text.lower() for k in config.EMERGENCY_KEYWORDS)
-
-
 packages, facilities, rights, meta = load_all()
 ss = st.session_state
 
@@ -76,7 +69,7 @@ if st.button("Знайти", type="primary") and text.strip():
 
 if "searched_text" in ss:
     result = ss.result
-    if (result and result.emergency) or emergency_text(ss.searched_text):
+    if (result and result.emergency) or is_emergency_text(ss.searched_text):
         st.error(f"🚑 Якщо зараз є загрозливі симптоми — дзвоніть **{config.EMERGENCY_NUMBER}**. Не їдьте самі.")
 
     # 3. Packages (LLM result or manual picker, fail closed) -------------------------------------
