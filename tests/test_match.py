@@ -301,3 +301,11 @@ def test_llm_failure_log_has_reason_but_not_user_text(gemma, caplog, reply, exc)
     assert result.needs_picker and result.reason == "llm_error"
     assert "LLM classify failed" in caplog.text
     assert "ПРИВАТНИЙ" not in caplog.text and "Тестова" not in caplog.text
+
+
+def test_gemma_model_follows_env_without_restart(monkeypatch):
+    monkeypatch.setenv("GARANTOVANO_GEMMA_MODEL", "model-a")
+    assert GemmaClassifier().model == "model-a"
+    monkeypatch.setenv("GARANTOVANO_GEMMA_MODEL", "model-b")
+    assert GemmaClassifier().model == "model-b"
+    assert GemmaClassifier(model="explicit").model == "explicit"
