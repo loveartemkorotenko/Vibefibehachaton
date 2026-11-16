@@ -2,6 +2,8 @@
 
 **Опиши звичайними словами, що тобі потрібно. Ми покажемо найближчі заклади, де це безкоштовно за Програмою медичних гарантій, і що робити, якщо просять гроші.**
 
+**Демо:** https://vibefibehachaton-xzcfyyvfwl3kujfunxjndc.streamlit.app/
+
 Open Data Hackathon, 16.11.2026 · дані НСЗУ з data.gov.ua · Python + Streamlit.
 
 ## Проблема
