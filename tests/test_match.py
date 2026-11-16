@@ -279,3 +279,25 @@ def test_gemma_bad_reply_fails_closed(gemma, reply):
 def test_gemma_api_error_fails_closed(gemma):
     gemma.models.generate_content.side_effect = RuntimeError("quota")
     assert match("вагітність", PACKAGES, GemmaClassifier()).needs_picker
+
+
+# --- failure logs never contain the person's text (#19 follow-up) ----------------------------
+PRIVATE = "ПРИВАТНИЙ-ТЕКСТ мама Оксана, вул. Тестова 1"
+
+
+@pytest.mark.parametrize("reply,exc", [
+    ("не знаю", None),                                                                    # no JSON
+    ('{"package_ids": ["35"], "emergency": "%s", "confidence": 0.9}' % PRIVATE, None),   # echo in wrong type
+    ('{"package_ids": ["35"], "emergency": false, "confidence": "%s"}' % PRIVATE, None),
+    (None, RuntimeError("400 INVALID_ARGUMENT request: " + PRIVATE)),                    # API error echoing input
+])
+def test_llm_failure_log_has_reason_but_not_user_text(gemma, caplog, reply, exc):
+    if exc:
+        gemma.models.generate_content.side_effect = exc
+    else:
+        gemma.models.generate_content.return_value = SimpleNamespace(text=reply)
+    with caplog.at_level("WARNING", logger="garantovano.match"):
+        result = match(PRIVATE, PACKAGES, GemmaClassifier())
+    assert result.needs_picker and result.reason == "llm_error"
+    assert "LLM classify failed" in caplog.text
+    assert "ПРИВАТНИЙ" not in caplog.text and "Тестова" not in caplog.text
