@@ -15,7 +15,7 @@ st.set_page_config(page_title="Гарантовано", page_icon="🩺", layout
 st.markdown("""<style>
 :root {--ivory: #FAF6EE; --card: #FFFDF8; --line: #E4DCCB; --blue: #1F5FAE; --blue-soft: #EAF1F8;
        --navy: #14263D; --muted: #4A5A6E;}
-.block-container {max-width: 900px; padding-top: 2rem;}
+.block-container {max-width: 900px; padding-top: 5rem;}
 [data-testid="stSidebar"] {background: #F2ECDF; border-right: 1px solid var(--line);}
 h1 {font-size: 2.8rem !important; letter-spacing: -0.6px; margin-bottom: 0 !important; color: var(--navy) !important;}
 h3 {color: var(--navy) !important;}
