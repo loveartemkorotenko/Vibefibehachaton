@@ -171,4 +171,7 @@ def match(text: str, packages: Mapping[str, Package], llm: LLMPort) -> MatchResu
         return _picker("invalid", emergency)
     if confidence < config.MIN_CONFIDENCE:
         return _picker("low_confidence", emergency)
+    ids = [pid for pid in ids if pid not in config.AMBULANCE_PACKAGE_IDS]
+    if not ids:  # only "call an ambulance" left: the 103 banner says that; let the person pick a service
+        return _picker("invalid", emergency)
     return MatchResult(tuple(dict.fromkeys(ids)), emergency, needs_picker=False, reason="ok")

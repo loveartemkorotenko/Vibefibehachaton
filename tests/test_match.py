@@ -309,3 +309,15 @@ def test_gemma_model_follows_env_without_restart(monkeypatch):
     monkeypatch.setenv("GARANTOVANO_GEMMA_MODEL", "model-b")
     assert GemmaClassifier().model == "model-b"
     assert GemmaClassifier(model="explicit").model == "explicit"
+
+
+def test_ambulance_package_dropped_so_search_is_not_empty():
+    pk = {**PACKAGES, "2": Package("2", "Екстрена медична допомога", "")}
+    result = match("У тата інсульт", pk, FakeLLM(["2", "5"], True, 0.9))
+    assert result.package_ids == ("5",) and result.emergency and not result.needs_picker
+
+
+def test_only_ambulance_package_falls_back_to_picker_with_103():
+    pk = {**PACKAGES, "2": Package("2", "Екстрена медична допомога", "")}
+    result = match("Інсульт", pk, FakeLLM(["2"], True, 0.9))
+    assert result.needs_picker and result.package_ids == () and result.emergency
